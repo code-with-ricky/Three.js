@@ -1,6 +1,6 @@
 # Three.js tutorial — learning notes
 
-Notes from the hands-on projects (starting with **project-2-learning**). Use this as a quick reference while you code.
+Notes from the hands-on projects (**project-2-learning**, **project-3-vite-setup**). Use this as a quick reference while you code.
 
 ---
 
@@ -202,7 +202,131 @@ So: **Clock connects your updates to real time**, which is what you want for pre
 
 ---
 
-### Summary
+## Project 3 (`project-3-vite-setup`): Vite + Tailwind + Three.js
+
+This folder uses **[Vite](https://vite.dev/)** as the dev server and bundler, **Tailwind CSS v4** with the **official Vite plugin**, and **Three.js** as an npm package (ES modules) instead of a CDN.
+
+### 1. Prerequisites
+
+Install **[Node.js](https://nodejs.org/)** (LTS is fine). That gives you:
+
+- **`node`** — runs JavaScript on your machine  
+- **`npm`** — installs packages and runs scripts from `package.json`
+
+Check in a terminal:
+
+```bash
+node -v
+npm -v
+```
+
+### 2. Create a Vite project
+
+On the [Vite site](https://vite.dev/guide/), the usual command is:
+
+```bash
+npm create vite@latest
+```
+
+The CLI will ask you a few things:
+
+- **Project name** — folder name for the app (or use `.` to scaffold **inside the current empty folder**).  
+- **Framework** — choose **Vanilla**.  
+- **Variant** — choose **JavaScript** (not TypeScript), unless you want TS.
+
+Example for a **new** folder named `my-app`:
+
+```bash
+npm create vite@latest my-app
+cd my-app
+```
+
+Example when you are **already inside** the project directory (must be empty or Vite may warn):
+
+```bash
+cd project-3-vite-setup
+npm create vite@latest .
+```
+
+### 3. Install dependencies and run the dev server
+
+From the project folder (where `package.json` is):
+
+```bash
+npm install
+npm run dev
+```
+
+Vite prints a **local URL** (often `http://localhost:5173`). Open it in the browser to see the default Vite page.
+
+### 4. Install Tailwind CSS (Vite plugin)
+
+Still in the project root, install Tailwind and the Vite plugin ([Tailwind + Vite docs](https://tailwindcss.com/docs/installation/using-vite)):
+
+```bash
+npm install tailwindcss @tailwindcss/vite
+```
+
+Add **`vite.config.js`** next to `package.json` and register the plugin:
+
+```js
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [tailwindcss()],
+})
+```
+
+Add a CSS file (e.g. **`src/style.css`**) with:
+
+```css
+@import "tailwindcss";
+```
+
+Import that CSS from your entry script (e.g. **`src/main.js`**):
+
+```js
+import './style.css'
+```
+
+Make sure **`index.html`** loads the entry as a module, for example:
+
+```html
+<script type="module" src="/src/main.js"></script>
+```
+
+### 5. “Run the Tailwind compiler” and the app
+
+With **Tailwind v4 + `@tailwindcss/vite`**, there is usually **no separate Tailwind CLI watch process**. Tailwind is compiled **as part of Vite** when CSS is imported.
+
+So you **run the app** with:
+
+```bash
+npm run dev
+```
+
+That single command starts Vite, which serves your app and processes Tailwind when it builds your CSS. Edit HTML/JS, save, and the page hot-reloads.
+
+### 6. Install Three.js
+
+From the project root:
+
+```bash
+npm i three
+```
+
+In **`src/main.js`** (or another module), import what you need, for example:
+
+```js
+import * as THREE from 'three'
+```
+
+You no longer need a `<script src="...three.min.js">` CDN tag for this setup; the bundler resolves `three` from `node_modules`.
+
+---
+
+## Animation timing (summary)
 
 | Approach | Tied to | Problem or use |
 |----------|---------|----------------|
