@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+        body {
+            background: #000;
+        }
+        canvas{
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+     <canvas id="draw"></canvas>
+
+     <!-- three.js cdn - note dont use CDN in actual projects; not a good practice -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js" referrerpolicy="no-referrer"></script>
+
+     <script src="./script.js"></script>
+</body>
+</html>
