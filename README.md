@@ -1,6 +1,6 @@
 # Three.js tutorial — learning notes
 
-Notes from the hands-on projects (**project-2-learning**, **project-3-vite-setup**). Use this as a quick reference while you code.
+Notes from the hands-on projects (**project-2-learning**, **project-3-vite-setup**, **project-4-geometry**). Use this as a quick reference while you code.
 
 ---
 
@@ -474,6 +474,195 @@ You rarely set these directly at first; dragging the mouse changes them. Later y
 ### Where this lives in your project
 
 In **project-3-vite-setup** → **`src/main.js`**: import at the top, create `controls` after the renderer and resize listener, then call **`controls.update()`** inside **`animate()`** before **`renderer.render`**.
+
+---
+
+## Geometries (`project-4-geometry`)
+
+A **geometry** defines the **shape** of a 3D object: where its **vertices** (points) are and how they connect into **faces** (usually triangles). It does **not** define color or lighting — that is the **material**.
+
+Every visible object follows the same pattern:
+
+```js
+const geometry = new THREE.SomeGeometry(/* size & detail args */);
+const material = new THREE.MeshBasicMaterial({ color: 'teal' });
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+```
+
+| Step | Role |
+|------|------|
+| **Geometry** | “What shape?” |
+| **Material** | “How does it look?” (color, wireframe, side, etc.) |
+| **Mesh** | Geometry + material, ready to add to the scene |
+| **`scene.add(mesh)`** | Puts it in the 3D world |
+
+Use **OrbitControls** and offset positions (`mesh.position.x = 2`) when you show **more than one** shape so they do not sit on top of each other.
+
+---
+
+### What are “segments”?
+
+Many geometries take **segment** counts (e.g. `32` around a circle). Segments control **how smooth** curved surfaces look:
+
+- **More segments** → smoother curves, **more triangles**, **heavier** on the GPU.  
+- **Fewer segments** → blocky / low-poly look, **faster**.
+
+While learning, values like `8`–`32` are fine. For a final product, increase until the curve looks smooth enough.
+
+---
+
+### Geometries you have built (cube, sphere, cylinder)
+
+#### 1. Box (cube) — `BoxGeometry`
+
+Used in **project-2-learning** and **project-3-vite-setup**.
+
+```js
+// BoxGeometry(width, height, depth)
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const mesh = new THREE.Mesh(geometry, material);
+```
+
+| Argument | Meaning |
+|----------|---------|
+| **width** | Size along **X** |
+| **height** | Size along **Y** |
+| **depth** | Size along **Z** |
+
+A cube is a box with **equal** width, height, and depth (e.g. `1, 1, 1`).
+
+---
+
+#### 2. Sphere — `SphereGeometry`
+
+Used in **project-4-geometry** (`src/main.js`).
+
+```js
+// SphereGeometry(radius, widthSegments, heightSegments)
+const sphereGeometry = new THREE.SphereGeometry(1, 10, 10);
+const sphere = new THREE.Mesh(sphereGeometry, material);
+sphere.position.x = -2;
+scene.add(sphere);
+```
+
+| Argument | Meaning |
+|----------|---------|
+| **radius** | Size of the sphere |
+| **widthSegments** | Horizontal slices (around the “equator”) |
+| **heightSegments** | Vertical slices (pole to pole) |
+
+**Wireframe** (`wireframe: true` on the material) draws only the edges — great for seeing how many segments you have.
+
+---
+
+#### 3. Cylinder — `CylinderGeometry`
+
+Also in **project-4-geometry**.
+
+```js
+// CylinderGeometry(radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded)
+const cylinderGeometry = new THREE.CylinderGeometry(0.6, 0.6, 2, 16, 1);
+const cylinder = new THREE.Mesh(cylinderGeometry, material);
+cylinder.position.x = 2;
+scene.add(cylinder);
+```
+
+| Argument | Meaning |
+|----------|---------|
+| **radiusTop** | Radius of the **top** face |
+| **radiusBottom** | Radius of the **bottom** face |
+| **height** | Height along **Y** |
+| **radialSegments** | Slices around the circle (smoothness of the round wall) |
+| **heightSegments** | Vertical divisions along the height |
+| **openEnded** | `false` (default) = closed caps; `true` = open tube, no top/bottom |
+
+**Shapes from the same constructor:**
+
+```js
+// Straight cylinder (your setup)
+new THREE.CylinderGeometry(0.6, 0.6, 2, 16, 1);
+
+// Cone (top radius 0)
+new THREE.CylinderGeometry(0, 0.8, 2, 16);
+
+// Tapered / frustum (different top and bottom radii)
+new THREE.CylinderGeometry(0.3, 0.8, 2, 16);
+
+// Hollow tube (no caps)
+new THREE.CylinderGeometry(0.6, 0.6, 2, 16, 1, true);
+```
+
+**`side: THREE.DoubleSide`** — By default, materials only render the **front** of each face. On thin or open shapes, the **inside** can look invisible from some angles. Use `DoubleSide` when you need both sides drawn (as with your cylinder material):
+
+```js
+new THREE.MeshBasicMaterial({ color: 'coral', side: THREE.DoubleSide });
+```
+
+---
+
+### More built-in geometries (try later)
+
+Three.js includes many ready-made shapes. Same pattern: `new THREE.XxxGeometry(...)`, then `Mesh` + `scene.add`.
+
+| Geometry | Constructor (summary) | Typical use |
+|----------|------------------------|-------------|
+| **PlaneGeometry** | `PlaneGeometry(width, height)` | Floors, walls, screens, grass |
+| **CircleGeometry** | `CircleGeometry(radius, segments)` | Flat discs, particles, UI-style circles |
+| **RingGeometry** | `RingGeometry(innerRadius, outerRadius, thetaSegments)` | Flat rings, portals, selection rings |
+| **ConeGeometry** | `ConeGeometry(radius, height, radialSegments)` | Cones (shortcut; cylinder with top radius `0` works too) |
+| **TorusGeometry** | `TorusGeometry(radius, tube, radialSegments, tubularSegments)` | Donut / ring shapes |
+| **TorusKnotGeometry** | `TorusKnotGeometry(radius, tube, tubularSegments, radialSegments, p, q)` | Decorative twisted rings |
+| **CapsuleGeometry** | `CapsuleGeometry(radius, length, capSegments, radialSegments)` | Pills, characters, rounded bodies |
+| **Polyhedra** | `TetrahedronGeometry`, `OctahedronGeometry`, `DodecahedronGeometry`, `IcosahedronGeometry`, `PolyhedronGeometry` | Crystals, dice, low-poly planets |
+
+**Quick examples to copy:**
+
+```js
+// Flat ground plane
+new THREE.PlaneGeometry(5, 5);
+
+// Donut
+new THREE.TorusGeometry(1, 0.3, 16, 100);
+
+// Cone
+new THREE.ConeGeometry(1, 2, 32);
+```
+
+---
+
+### Material tips while learning geometries
+
+| Option | Effect |
+|--------|--------|
+| **`wireframe: true`** | Shows edges and segment layout (good for sphere/cylinder study) |
+| **`color: 'teal'`** or **`0x00ffaa`** | Solid color (string or hex number) |
+| **`side: THREE.DoubleSide`** | Renders front and back of faces |
+| **`side: THREE.FrontSide`** | Default — only front faces |
+
+`MeshBasicMaterial` ignores lights, so you can focus on **shape** first. Later, use **`MeshStandardMaterial`** + lights for realistic surfaces.
+
+---
+
+### Custom geometry (advanced, for later)
+
+- **`BufferGeometry`** — you supply your own vertex positions (and optional normals, UVs). Used for loaded models, particles, and custom meshes.  
+- **Loaders** (e.g. **GLTFLoader**) — import `.gltf` / `.glb` models from Blender or other tools instead of only primitives.
+
+For this course stage, **built-in geometries** are enough to learn size, segments, and how meshes sit in the scene.
+
+---
+
+### Checklist — adding a new shape
+
+1. Create geometry with the right constructor and arguments.  
+2. Create material (color, wireframe, `side` if needed).  
+3. `new THREE.Mesh(geometry, material)`.  
+4. Optional: `mesh.position.set(x, y, z)` so it does not overlap others.  
+5. `scene.add(mesh)`.  
+6. Keep **`renderer.render`** (and **`controls.update()`** if using OrbitControls) in your loop.
+
+**Project folder:** **project-4-geometry** — sphere and cylinder in **`src/main.js`**; cube/box from earlier projects.
 
 ---
 
