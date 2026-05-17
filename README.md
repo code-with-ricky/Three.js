@@ -326,6 +326,157 @@ You no longer need a `<script src="...three.min.js">` CDN tag for this setup; th
 
 ---
 
+## Responsiveness (window resize)
+
+When the user **resizes the browser window**, the canvas and camera must **update** to match the new width and height. If you only set size once at startup, the 3D view can look **stretched**, **squashed**, or **cropped** after resizing.
+
+### What you set at the start
+
+On first load you already match the window:
+
+```js
+renderer.setSize(window.innerWidth, window.innerHeight);
+// camera was created with:
+// new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
+```
+
+- **`renderer.setSize(...)`** — how many pixels wide/tall the **canvas** draws.  
+- **`camera.aspect`** — width ÷ height; must stay in sync with the canvas so the **field of view** is not distorted.
+
+### Listen for `resize`
+
+When the window size changes, run the same kind of updates again:
+
+```js
+window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+});
+```
+
+| Line | What it does |
+|------|----------------|
+| `window.addEventListener('resize', ...)` | Runs your code whenever the user changes the window size (drag edge, maximize, rotate phone, etc.). |
+| `renderer.setSize(window.innerWidth, window.innerHeight)` | Resizes the **drawing buffer** so the canvas fills the new window dimensions. |
+| `camera.aspect = window.innerWidth / window.innerHeight` | Updates the camera’s **aspect ratio** so it matches the new canvas shape (wide vs tall). |
+| `camera.updateProjectionMatrix()` | Tells Three.js to **rebuild** the camera’s internal projection math after you changed `aspect`. **Required** whenever you change aspect (or FOV, near, far on a perspective camera) — without it, the image can look **squeezed** or wrong. |
+
+### Mental model
+
+1. **Renderer** = “how big is the picture on screen?” → `setSize` on resize.  
+2. **Camera aspect** = “is the picture wide or tall?” → `aspect = width / height` on resize.  
+3. **`updateProjectionMatrix()`** = “apply the new camera math” → call it after changing `aspect` (or other projection settings).
+
+> **Rule of thumb:** If you change **`camera.aspect`**, **`camera.fov`**, **`camera.near`**, or **`camera.far`** on a `PerspectiveCamera`, call **`camera.updateProjectionMatrix()`** before the next `render`.
+
+### Where this lives in your project
+
+In **project-3-vite-setup**, this block sits in **`src/main.js`** after the initial `renderer.setSize(...)` and before your `animate()` loop, so the scene stays correct whenever the window size changes.
+
+---
+
+## OrbitControls (camera with mouse / touch)
+
+**OrbitControls** is an add-on from Three.js that lets the user **orbit** around a target with the mouse or touch: **rotate** around the scene, **pan** sideways, and **zoom** in and out. It updates the **camera** for you based on input.
+
+It ships with the **`three`** npm package (no extra install). Import it from the addons folder:
+
+```js
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+```
+
+### Create the controls
+
+Pass the **camera** and the **canvas** (the element that receives pointer events):
+
+```js
+const controls = new OrbitControls(camera, canvas);
+```
+
+The camera still needs a starting position (e.g. `camera.position.z = 5`). OrbitControls then moves that camera around a **target** point (default: the origin `(0, 0, 0)`).
+
+### Default mouse / touch behavior
+
+| Input | Action |
+|--------|--------|
+| **Left drag** | Rotate (orbit) around the target |
+| **Right drag** (or two-finger drag on trackpad) | Pan |
+| **Scroll wheel** | Zoom in / out |
+
+You can turn each action on or off with the `enable*` flags below.
+
+### Options used in **project-3-vite-setup**
+
+```js
+const controls = new OrbitControls(camera, canvas);
+
+controls.enableDamping = true;
+controls.dampingFactor = 0.25;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 2.0;
+controls.enableZoom = true;
+controls.zoomSpeed = 1.5;
+controls.enablePan = true;
+controls.panSpeed = 1.5;
+controls.enableRotate = true;
+controls.rotateSpeed = 1.5;
+```
+
+| Property | What it does |
+|----------|----------------|
+| **`enableDamping`** | Adds **inertia**: after you release the mouse, the camera **eases to a stop** instead of stopping instantly. Feels smoother. |
+| **`dampingFactor`** | How strong the damping is when `enableDamping` is `true`. **Smaller** values often feel like movement **coasts longer**; **larger** values settle **faster**. Tweak until it feels right (e.g. `0.05`–`0.25`). |
+| **`autoRotate`** | If `true`, the camera **slowly orbits** around the target on its own (good for demos). |
+| **`autoRotateSpeed`** | How fast that automatic orbit runs (default is around `2.0`). |
+| **`enableZoom`** | Allow zooming with the scroll wheel (or pinch). Set `false` to disable zoom. |
+| **`zoomSpeed`** | Multiplier for zoom sensitivity. |
+| **`enablePan`** | Allow moving the view sideways / up-down without rotating. Set `false` to lock panning. |
+| **`panSpeed`** | Multiplier for pan sensitivity. |
+| **`enableRotate`** | Allow orbiting with left-drag. Set `false` to lock rotation. |
+| **`rotateSpeed`** | Multiplier for rotate sensitivity. |
+
+### `controls.update()` — call every frame
+
+When **`enableDamping`** or **`autoRotate`** is on, you must call **`controls.update()`** inside your animation loop **before** `renderer.render`:
+
+```js
+function animate() {
+    window.requestAnimationFrame(animate);
+
+    controls.update(); // apply damping + auto-rotate for this frame
+
+    renderer.render(scene, camera);
+}
+
+animate();
+```
+
+| Why | Explanation |
+|-----|----------------|
+| **Damping** | Each frame, OrbitControls **eases** the camera toward rest; `update()` applies that step. Without it, damping (and smooth motion) will not work. |
+| **Auto-rotate** | `update()` advances the automatic orbit each frame. |
+| **Order** | Call **`controls.update()`** first, then **`renderer.render(scene, camera)`**, so the picture matches the latest camera position. |
+
+If damping and auto-rotate are both **off**, you can still call `update()` every frame; it is harmless and keeps the habit for when you turn those features on.
+
+### Angles (how orbit rotation is described)
+
+OrbitControls moves the camera on a **sphere** around the target. Two angles describe that position:
+
+| Term | Meaning (simple) |
+|------|-------------------|
+| **Azimuthal angle** | Rotation around the **vertical** axis — like spinning around the object on a **horizontal** circle (left/right around it). |
+| **Polar angle** | Rotation **up and down** from the “north pole” of that sphere — how high or low the camera sits above/below the target. |
+
+You rarely set these directly at first; dragging the mouse changes them. Later you can limit them with `minAzimuthAngle`, `maxPolarAngle`, etc., to stop the user from flipping under the floor or going too far overhead.
+
+### Where this lives in your project
+
+In **project-3-vite-setup** → **`src/main.js`**: import at the top, create `controls` after the renderer and resize listener, then call **`controls.update()`** inside **`animate()`** before **`renderer.render`**.
+
+---
+
 ## Animation timing (summary)
 
 | Approach | Tied to | Problem or use |
@@ -343,13 +494,3 @@ You no longer need a `<script src="...three.min.js">` CDN tag for this setup; th
 - **Mesh** — geometry + material, as one object.  
 - **Near / far (camera)** — only things between these distances from the camera are drawn; keeps depth precision reasonable.  
 - **Aspect ratio** — width ÷ height of the canvas; must match how you draw so shapes are not stretched.
-
----
-
-## Next steps (when you are ready)
-
-- **Lights** + materials like `MeshStandardMaterial` so surfaces respond to light.  
-- **Resize** handling so the camera aspect and renderer size stay correct when the window changes.  
-- **OrbitControls** or custom input so the user can move the camera with the mouse.
-
-Happy learning.
